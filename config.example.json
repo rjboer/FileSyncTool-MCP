@@ -1,0 +1,13 @@
+{
+  "source_root": "C:\\AI-organisatie",
+  "workspace_root": "C:\\MCP-werkmap",
+  "index_path": "C:\\MCP-werkmap\\file-index.json",
+  "remote": {
+    "endpoint": "https://s3.example.com",
+    "region": "eu-central-1",
+    "bucket": "mijn-bucket",
+    "prefix": "",
+    "access_key_id_env": "MCP_S3_ACCESS_KEY_ID",
+    "secret_access_key_env": "MCP_S3_SECRET_ACCESS_KEY"
+  }
+}
