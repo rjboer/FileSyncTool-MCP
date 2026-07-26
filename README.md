@@ -1,8 +1,10 @@
 # MCP-bestandsindex
 
-Een native Windows MCP-server die bestanden vanuit een door AI georganiseerde bronmap naar een tijdelijke werkmap kopieert, in JSON indexeert en met rclone naar S3-compatible opslag synchroniseert.
+Een native Windows MCP-server die bestanden vanuit een door AI georganiseerde bronmap naar een tijdelijke werkmap kopieert, in JSON indexeert. 
 
 Na succesvolle upload controleert de server ieder bestand met `rclone check`. Alleen een geverifieerde lokale kopie wordt automatisch verwijderd. Het oorspronkelijke relatieve pad en de checksum blijven met status `RemoteOnly` in de index staan.
+
+Dit is handig om testen met AI te doen en je een locale kopie en een index nodig hebt. 
 
 ## Vereisten
 
