@@ -67,6 +67,12 @@ func (s *Store) FindIdentity(fileType, checksum string) (Entry, bool) {
 	return Entry{}, false
 }
 
+func (s *Store) IsIndexPath(candidate string) bool {
+	indexPath := resolvedComparablePath(s.path)
+	candidatePath := resolvedComparablePath(candidate)
+	return strings.EqualFold(indexPath, candidatePath)
+}
+
 func (s *Store) Add(entry Entry) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -88,6 +94,16 @@ func (s *Store) Add(entry Entry) error {
 	}
 	s.doc = next
 	return nil
+}
+
+func resolvedComparablePath(value string) string {
+	if resolved, err := filepath.EvalSymlinks(value); err == nil {
+		return filepath.Clean(resolved)
+	}
+	if absolute, err := filepath.Abs(value); err == nil {
+		return filepath.Clean(absolute)
+	}
+	return filepath.Clean(value)
 }
 
 func (s *Store) Transition(relativePath string, from, to Status) error {

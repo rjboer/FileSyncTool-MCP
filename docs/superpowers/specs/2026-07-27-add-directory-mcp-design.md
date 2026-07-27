@@ -40,7 +40,8 @@ The structured result contains:
 - `removed_remote_only`: number of source files removed after their identity
   was confirmed as `RemoteOnly`;
 - `skipped`: number of unsupported non-regular entries, including symbolic
-  links and junctions;
+  links and junctions, plus the live index file if it is encountered below
+  `source_root`;
 - `failed`: number of file-level failures recorded in the CSV log;
 - `error_log_path`: absolute path of the CSV log for this invocation.
 
@@ -63,6 +64,10 @@ The directory tree is walked recursively in deterministic lexical order.
 Symbolic links and junctions are not followed. Regular files are processed one
 at a time, so the existing atomic index writes make completed work resumable
 after interruption.
+
+The live index file is treated as reserved internal state and is skipped if a
+valid configuration places it below `source_root`. This prevents a directory
+batch from staging and then mutating a snapshot of its own index.
 
 ## Per-file decision table
 
@@ -119,6 +124,11 @@ Every accepted invocation creates a separate CSV file below:
 The filename contains a UTC timestamp and collision-resistant run ID. It does
 not contain an unsanitized source directory name. The result always returns the
 absolute log path, including when no file-level errors occurred.
+
+Before creating a log, every existing `logs/add_directory` path component is
+inspected without following links. Symbolic links, Windows junctions, and other
+reparse points are rejected, and the physically resolved log directory must
+remain below the physically resolved `workspace_root`.
 
 The CSV begins with this header:
 

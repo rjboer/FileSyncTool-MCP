@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strings"
 	"testing"
 	"time"
 )
@@ -15,12 +16,22 @@ func TestDirectoryErrorLogWritesEscapedCSV(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	closed := false
+	defer func() {
+		if !closed {
+			_ = log.Close()
+		}
+	}()
 	path := log.Path()
 	if !filepath.IsAbs(path) {
 		t.Fatalf("Path() = %q, want absolute path", path)
 	}
 	wantParent := filepath.Join(workspace, "logs", "add_directory")
-	if filepath.Dir(path) != wantParent {
+	resolvedWantParent, err := filepath.EvalSymlinks(wantParent)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.EqualFold(filepath.Clean(filepath.Dir(path)), filepath.Clean(resolvedWantParent)) {
 		t.Fatalf("Path() parent = %q, want %q", filepath.Dir(path), wantParent)
 	}
 
@@ -36,6 +47,7 @@ func TestDirectoryErrorLogWritesEscapedCSV(t *testing.T) {
 	if err := log.Close(); err != nil {
 		t.Fatal(err)
 	}
+	closed = true
 
 	file, err := os.Open(path)
 	if err != nil {

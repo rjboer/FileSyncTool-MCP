@@ -131,7 +131,8 @@ Een fout bij één bestand behoudt het bronbestand, wordt gelogd en verhindert
 niet dat latere bestanden worden verwerkt. Alleen een ongeldig startpad,
 onbeschikbare foutlogging, een fout in het log zelf of annulering stopt de
 batch. Symlinks, junctions en andere niet-reguliere entries worden niet
-gevolgd of verwerkt.
+gevolgd of verwerkt. Als het live `index_path` onder `source_root` staat,
+wordt ook dat bestand altijd overgeslagen.
 
 Iedere geaccepteerde aanroep maakt een afzonderlijk CSV-log onder:
 

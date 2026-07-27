@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 )
 
@@ -31,9 +32,9 @@ type csvDirectoryErrorLog struct {
 }
 
 func newDirectoryErrorLog(workspaceRoot string) (directoryErrorLog, error) {
-	logDirectory := filepath.Join(workspaceRoot, "logs", "add_directory")
-	if err := os.MkdirAll(logDirectory, 0o755); err != nil {
-		return nil, fmt.Errorf("create directory error log folder: %w", err)
+	logDirectory, err := ensureSafeLogDirectory(workspaceRoot)
+	if err != nil {
+		return nil, err
 	}
 	random := make([]byte, 8)
 	if _, err := rand.Read(random); err != nil {
@@ -66,6 +67,45 @@ func newDirectoryErrorLog(workspaceRoot string) (directoryErrorLog, error) {
 		return nil, fmt.Errorf("write directory error log header: %w", err)
 	}
 	return log, nil
+}
+
+func ensureSafeLogDirectory(workspaceRoot string) (string, error) {
+	resolvedRoot, err := filepath.EvalSymlinks(workspaceRoot)
+	if err != nil {
+		return "", fmt.Errorf("resolve workspace root for directory error log: %w", err)
+	}
+	current := filepath.Clean(resolvedRoot)
+	for _, name := range []string{"logs", "add_directory"} {
+		current = filepath.Join(current, name)
+		info, err := os.Lstat(current)
+		if os.IsNotExist(err) {
+			if mkdirErr := os.Mkdir(current, 0o755); mkdirErr != nil && !os.IsExist(mkdirErr) {
+				return "", fmt.Errorf("create directory error log folder: %w", mkdirErr)
+			}
+			info, err = os.Lstat(current)
+		}
+		if err != nil {
+			return "", fmt.Errorf("inspect directory error log folder: %w", err)
+		}
+		if isUnsafeDirectoryLink(info) {
+			return "", fmt.Errorf("directory error log folder contains a symbolic link or junction")
+		}
+		if !info.IsDir() {
+			return "", fmt.Errorf("directory error log path component is not a directory")
+		}
+	}
+	resolvedDirectory, err := filepath.EvalSymlinks(current)
+	if err != nil {
+		return "", fmt.Errorf("resolve directory error log folder: %w", err)
+	}
+	relative, err := filepath.Rel(resolvedRoot, resolvedDirectory)
+	if err != nil ||
+		relative == ".." ||
+		filepath.IsAbs(relative) ||
+		strings.HasPrefix(relative, ".."+string(filepath.Separator)) {
+		return "", fmt.Errorf("directory error log folder escapes workspace root")
+	}
+	return resolvedDirectory, nil
 }
 
 func (l *csvDirectoryErrorLog) Path() string {
@@ -104,5 +144,8 @@ func (l *csvDirectoryErrorLog) write(row []string) error {
 		return err
 	}
 	l.writer.Flush()
-	return l.writer.Error()
+	if err := l.writer.Error(); err != nil {
+		return err
+	}
+	return l.file.Sync()
 }

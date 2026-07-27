@@ -6,6 +6,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"sync"
 	"testing"
 
 	"mcp-file-tool/internal/index"
@@ -329,6 +330,39 @@ func TestAddDirectoryChangedRemoteOnlyIdentityIsRetainedAndLogged(t *testing.T) 
 	rows := readDirectoryLog(t, result.ErrorLogPath)
 	if len(rows) != 2 || rows[1][4] != "revalidate" {
 		t.Fatalf("log rows = %#v", rows)
+	}
+}
+
+func TestAddDirectorySkipsLiveIndexInsideSourceRoot(t *testing.T) {
+	base := t.TempDir()
+	source := filepath.Join(base, "source")
+	workspace := filepath.Join(base, "workspace")
+	for _, directory := range []string{source, workspace} {
+		if err := os.MkdirAll(directory, 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	indexPath := filepath.Join(source, "file-index.json")
+	store, err := index.Open(indexPath, workspace, Fingerprint)
+	if err != nil {
+		t.Fatal(err)
+	}
+	service := NewAddService(source, workspace, store, &sync.Mutex{})
+	mustFilesWrite(t, filepath.Join(source, "document.txt"), "document")
+
+	result, err := service.AddDirectory(context.Background(), source)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.Scanned != 1 || result.Added != 1 || result.Skipped != 1 {
+		t.Fatalf("result = %#v", result)
+	}
+	if _, err := os.Stat(filepath.Join(workspace, "file-index.json")); !os.IsNotExist(err) {
+		t.Fatalf("live index was staged or stat failed: %v", err)
+	}
+	if len(store.Snapshot().Files) != 1 ||
+		store.Snapshot().Files[0].RelativePath != "document.txt" {
+		t.Fatalf("index = %#v", store.Snapshot())
 	}
 }
 

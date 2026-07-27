@@ -15,8 +15,8 @@ func DirectoryWithin(root, directory string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("stat directory: %w", err)
 	}
-	if directoryInfo.Mode()&os.ModeSymlink != 0 {
-		return "", fmt.Errorf("directory path must not be a symbolic link")
+	if isUnsafeDirectoryLink(directoryInfo) {
+		return "", fmt.Errorf("directory path must not be a symbolic link or junction")
 	}
 	if !directoryInfo.IsDir() {
 		return "", fmt.Errorf("path is not a directory")

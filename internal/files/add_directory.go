@@ -54,6 +54,10 @@ func (s *AddService) AddDirectory(ctx context.Context, sourceDir string) (result
 		if err := ctx.Err(); err != nil {
 			return err
 		}
+		if s.store.IsIndexPath(current) {
+			result.Skipped++
+			return nil
+		}
 		if entry.IsDir() {
 			return nil
 		}
