@@ -103,6 +103,52 @@ De tool:
 
 Een bestaand doelbestand met andere inhoud wordt nooit overschreven.
 
+### `add_directory`
+
+Verwerkt recursief één directory binnen `source_root`. `source_root` zelf is
+ook toegestaan.
+
+Invoer:
+
+```json
+{
+  "path": "C:\\AI-organisatie\\KlantA"
+}
+```
+
+De tool doorloopt de directory in vaste volgorde en gebruikt per regulier
+bestand dezelfde padcontrole, xxHash64-identiteit, geverifieerde kopie en
+directe indexopslag als `add_file`.
+
+| Bekende status voor type + checksum | Actie op het bronbestand |
+| --- | --- |
+| Niet bekend | Kopiëren en indexeren als `OnFileNotRemote`. |
+| `OnFileNotRemote` | Niet opnieuw toevoegen; bron behouden. |
+| `OnFileAndRemote` | Niet opnieuw toevoegen; bron behouden. |
+| `RemoteOnly` | Identiteit opnieuw controleren en alleen het bronbestand verwijderen. |
+
+Een fout bij één bestand behoudt het bronbestand, wordt gelogd en verhindert
+niet dat latere bestanden worden verwerkt. Alleen een ongeldig startpad,
+onbeschikbare foutlogging, een fout in het log zelf of annulering stopt de
+batch. Symlinks, junctions en andere niet-reguliere entries worden niet
+gevolgd of verwerkt.
+
+Iedere geaccepteerde aanroep maakt een afzonderlijk CSV-log onder:
+
+```text
+<workspace_root>\logs\add_directory\
+```
+
+Het gestructureerde resultaat bevat `scanned`, `added`,
+`retained_on_file_not_remote`, `retained_on_file_and_remote`,
+`removed_remote_only`, `skipped`, `failed` en het absolute
+`error_log_path`.
+
+De tool verwijdert nooit directory's, ook niet wanneer die na het verwijderen
+van `RemoteOnly`-bestanden leeg zijn. De bestaande mappenstructuur blijft dus
+als raamwerk aanwezig. `add_directory` start geen upload; roep daarvoor
+`sync_files` afzonderlijk aan.
+
 ### `sync_files`
 
 Heeft geen parameters. Eén aanroep verwerkt alle entries met `OnFileNotRemote`:

@@ -13,11 +13,15 @@ type AddFileInput struct {
 	Path string `json:"path" jsonschema:"absolute path to a regular file inside source_root"`
 }
 
+type AddDirectoryInput struct {
+	Path string `json:"path" jsonschema:"absolute path to a directory inside source_root"`
+}
+
 type SyncFilesInput struct{}
 
 func New(add *files.AddService, syncService *syncer.Service) *mcp.Server {
 	server := mcp.NewServer(
-		&mcp.Implementation{Name: "mcp-file-tool", Version: "1.0.0"},
+		&mcp.Implementation{Name: "mcp-file-tool", Version: "1.1.0"},
 		nil,
 	)
 	mcp.AddTool(
@@ -28,6 +32,17 @@ func New(add *files.AddService, syncService *syncer.Service) *mcp.Server {
 		},
 		func(ctx context.Context, _ *mcp.CallToolRequest, input AddFileInput) (*mcp.CallToolResult, files.AddResult, error) {
 			result, err := add.Add(ctx, input.Path)
+			return nil, result, err
+		},
+	)
+	mcp.AddTool(
+		server,
+		&mcp.Tool{
+			Name:        "add_directory",
+			Description: "Recursively process a directory inside source_root, preserving directories and logging per-file failures.",
+		},
+		func(ctx context.Context, _ *mcp.CallToolRequest, input AddDirectoryInput) (*mcp.CallToolResult, files.AddDirectoryResult, error) {
+			result, err := add.AddDirectory(ctx, input.Path)
 			return nil, result, err
 		},
 	)
