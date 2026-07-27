@@ -33,6 +33,10 @@ func NewAddService(sourceRoot, workspaceRoot string, store *index.Store, opMu *s
 func (s *AddService) Add(ctx context.Context, sourcePath string) (AddResult, error) {
 	s.opMu.Lock()
 	defer s.opMu.Unlock()
+	return s.addLocked(ctx, sourcePath)
+}
+
+func (s *AddService) addLocked(ctx context.Context, sourcePath string) (AddResult, error) {
 	if err := ctx.Err(); err != nil {
 		return AddResult{}, err
 	}

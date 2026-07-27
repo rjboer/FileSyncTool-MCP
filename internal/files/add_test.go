@@ -131,6 +131,58 @@ func TestRemoveEmptyParentsStopsAtWorkspace(t *testing.T) {
 	}
 }
 
+func TestDirectoryWithinAcceptsRootAndNestedDirectory(t *testing.T) {
+	root := t.TempDir()
+	nested := filepath.Join(root, "a", "b")
+	if err := os.MkdirAll(nested, 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	for _, candidate := range []string{root, nested} {
+		resolved, err := DirectoryWithin(root, candidate)
+		if err != nil {
+			t.Fatalf("DirectoryWithin(%q) error = %v", candidate, err)
+		}
+		if !filepath.IsAbs(resolved) {
+			t.Fatalf("DirectoryWithin(%q) = %q, want absolute path", candidate, resolved)
+		}
+	}
+}
+
+func TestDirectoryWithinRejectsInvalidRoots(t *testing.T) {
+	root := t.TempDir()
+	file := filepath.Join(root, "file.txt")
+	mustFilesWrite(t, file, "x")
+
+	cases := []string{
+		"relative",
+		file,
+		filepath.Join(root, "missing"),
+		t.TempDir(),
+	}
+	for _, candidate := range cases {
+		if _, err := DirectoryWithin(root, candidate); err == nil {
+			t.Errorf("DirectoryWithin(%q) error = nil", candidate)
+		}
+	}
+}
+
+func TestDirectoryWithinRejectsSymlinkRoot(t *testing.T) {
+	root := t.TempDir()
+	target := filepath.Join(root, "target")
+	if err := os.Mkdir(target, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	link := filepath.Join(root, "link")
+	if err := os.Symlink(target, link); err != nil {
+		t.Skipf("symlinks unavailable: %v", err)
+	}
+
+	if _, err := DirectoryWithin(root, link); err == nil {
+		t.Fatal("DirectoryWithin() error = nil, want symlink rejection")
+	}
+}
+
 func newAddFixture(t *testing.T) (string, string, *index.Store, *AddService) {
 	t.Helper()
 	base := t.TempDir()

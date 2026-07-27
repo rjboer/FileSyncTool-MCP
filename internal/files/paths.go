@@ -7,6 +7,39 @@ import (
 	"strings"
 )
 
+func DirectoryWithin(root, directory string) (string, error) {
+	if !filepath.IsAbs(directory) {
+		return "", fmt.Errorf("directory path must be absolute")
+	}
+	directoryInfo, err := os.Lstat(directory)
+	if err != nil {
+		return "", fmt.Errorf("stat directory: %w", err)
+	}
+	if directoryInfo.Mode()&os.ModeSymlink != 0 {
+		return "", fmt.Errorf("directory path must not be a symbolic link")
+	}
+	if !directoryInfo.IsDir() {
+		return "", fmt.Errorf("path is not a directory")
+	}
+	resolvedRoot, err := filepath.EvalSymlinks(root)
+	if err != nil {
+		return "", fmt.Errorf("resolve root: %w", err)
+	}
+	resolvedDirectory, err := filepath.EvalSymlinks(directory)
+	if err != nil {
+		return "", fmt.Errorf("resolve directory: %w", err)
+	}
+	relative, err := filepath.Rel(resolvedRoot, resolvedDirectory)
+	if err != nil {
+		return "", fmt.Errorf("make directory relative: %w", err)
+	}
+	if filepath.IsAbs(relative) || relative == ".." ||
+		strings.HasPrefix(relative, ".."+string(filepath.Separator)) {
+		return "", fmt.Errorf("directory is outside configured root")
+	}
+	return resolvedDirectory, nil
+}
+
 func RelativeWithin(root, path string) (string, error) {
 	resolvedRoot, err := filepath.EvalSymlinks(root)
 	if err != nil {
