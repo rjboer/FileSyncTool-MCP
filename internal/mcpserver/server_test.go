@@ -28,7 +28,7 @@ func TestServerListsExpectedTools(t *testing.T) {
 		names = append(names, tool.Name)
 	}
 	slices.Sort(names)
-	if !slices.Equal(names, []string{"add_file", "sync_files"}) {
+	if !slices.Equal(names, []string{"add_directory", "add_file", "sync_files"}) {
 		t.Fatalf("tools = %#v", names)
 	}
 }
@@ -52,6 +52,32 @@ func TestAddFileToolRequiresOnlyPathAndReturnsStructuredResult(t *testing.T) {
 	decodeStructured(t, result.StructuredContent, &output)
 	if !output.New || output.Entry.RelativePath != "KlantA/rapport.txt" {
 		t.Fatalf("structured output = %#v", output)
+	}
+}
+
+func TestAddDirectoryToolRequiresOnlyPathAndReturnsStructuredResult(t *testing.T) {
+	fixture := newMCPFixture(t)
+	selected := filepath.Join(fixture.source, "KlantA")
+	sourcePath := filepath.Join(selected, "nested", "rapport.txt")
+	mustMCPWrite(t, sourcePath, "report")
+	session := connectTestServer(t, New(fixture.add, fixture.sync))
+
+	result, err := session.CallTool(context.Background(), &mcp.CallToolParams{
+		Name: "add_directory", Arguments: map[string]any{"path": selected},
+	})
+	if err != nil {
+		t.Fatalf("CallTool() error = %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("add_directory returned tool error: %#v", result.Content)
+	}
+	var output files.AddDirectoryResult
+	decodeStructured(t, result.StructuredContent, &output)
+	if output.Scanned != 1 || output.Added != 1 || output.Failed != 0 {
+		t.Fatalf("structured output = %#v", output)
+	}
+	if output.ErrorLogPath == "" {
+		t.Fatalf("error_log_path = empty")
 	}
 }
 

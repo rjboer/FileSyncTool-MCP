@@ -17,22 +17,31 @@ type AddResult struct {
 }
 
 type AddService struct {
-	sourceRoot    string
-	workspaceRoot string
-	store         *index.Store
-	opMu          *sync.Mutex
+	sourceRoot       string
+	workspaceRoot    string
+	store            *index.Store
+	opMu             *sync.Mutex
+	removeSource     func(string) error
+	revalidateSource index.FingerprintFunc
+	newDirectoryLog  func(string) (directoryErrorLog, error)
 }
 
 func NewAddService(sourceRoot, workspaceRoot string, store *index.Store, opMu *sync.Mutex) *AddService {
 	return &AddService{
 		sourceRoot: sourceRoot, workspaceRoot: workspaceRoot,
-		store: store, opMu: opMu,
+		store: store, opMu: opMu, removeSource: os.Remove,
+		revalidateSource: Fingerprint,
+		newDirectoryLog:  newDirectoryErrorLog,
 	}
 }
 
 func (s *AddService) Add(ctx context.Context, sourcePath string) (AddResult, error) {
 	s.opMu.Lock()
 	defer s.opMu.Unlock()
+	return s.addLocked(ctx, sourcePath)
+}
+
+func (s *AddService) addLocked(ctx context.Context, sourcePath string) (AddResult, error) {
 	if err := ctx.Err(); err != nil {
 		return AddResult{}, err
 	}
