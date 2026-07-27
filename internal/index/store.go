@@ -146,6 +146,13 @@ func scan(workspaceRoot, indexPath string, fingerprint FingerprintFunc) (Documen
 			return walkErr
 		}
 		if entry.IsDir() {
+			relative, err := filepath.Rel(workspaceRoot, current)
+			if err != nil {
+				return err
+			}
+			if strings.EqualFold(filepath.ToSlash(relative), "logs/add_directory") {
+				return filepath.SkipDir
+			}
 			return nil
 		}
 		if !entry.Type().IsRegular() || excludedScanFile(current, indexPath, entry.Name()) {

@@ -38,6 +38,7 @@ func TestOpenBuildsMissingIndexOnce(t *testing.T) {
 	mustIndexWrite(t, filepath.Join(workspace, "nested", "a.pdf"), "alpha")
 	mustIndexWrite(t, filepath.Join(workspace, ".mcp-copy-ignored.tmp"), "temp")
 	mustIndexWrite(t, filepath.Join(workspace, ".mcp-rclone-files-ignored.txt"), "temp")
+	mustIndexWrite(t, filepath.Join(workspace, "logs", "add_directory", "run.csv"), "audit")
 
 	store, err := Open(indexPath, workspace, testFingerprint)
 	if err != nil {
