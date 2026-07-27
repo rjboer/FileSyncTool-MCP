@@ -21,12 +21,13 @@ type AddService struct {
 	workspaceRoot string
 	store         *index.Store
 	opMu          *sync.Mutex
+	removeSource  func(string) error
 }
 
 func NewAddService(sourceRoot, workspaceRoot string, store *index.Store, opMu *sync.Mutex) *AddService {
 	return &AddService{
 		sourceRoot: sourceRoot, workspaceRoot: workspaceRoot,
-		store: store, opMu: opMu,
+		store: store, opMu: opMu, removeSource: os.Remove,
 	}
 }
 
